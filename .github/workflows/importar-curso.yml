@@ -1,0 +1,71 @@
+name: Importar ZIP del curso MLOps
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - Telco_MLOps_Curso_Completo.zip
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  importar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Obtener repositorio
+        uses: actions/checkout@v4
+
+      - name: Verificar estructura del ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f Telco_MLOps_Curso_Completo.zip
+          unzip -tq Telco_MLOps_Curso_Completo.zip
+          unzip -Z1 Telco_MLOps_Curso_Completo.zip | grep -Fx 'TELCO_MLOPS_CURSO/proyecto_integrado/requirements.txt'
+          unzip -Z1 Telco_MLOps_Curso_Completo.zip | grep -Fx 'TELCO_MLOPS_CURSO/proyecto_integrado/data/raw/telco.csv'
+          unzip -Z1 Telco_MLOps_Curso_Completo.zip | grep -Fx 'TELCO_MLOPS_CURSO/proyecto_integrado/models/champion.joblib'
+
+      - name: Extraer proyecto y nueve practicas
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .temporal_importacion
+          unzip -q Telco_MLOps_Curso_Completo.zip -d .temporal_importacion
+          cp -a .temporal_importacion/TELCO_MLOPS_CURSO/proyecto_integrado ./proyecto_integrado
+          cp -a .temporal_importacion/TELCO_MLOPS_CURSO/practicas ./practicas
+          cp .temporal_importacion/TELCO_MLOPS_CURSO/EMPIEZA_AQUI.md .
+          cp .temporal_importacion/TELCO_MLOPS_CURSO/VERIFICACION_GENERAL.md .
+          cp .temporal_importacion/TELCO_MLOPS_CURSO/Dataset_original_aportado.zip .
+          rm -rf .temporal_importacion
+          find proyecto_integrado practicas -type d -name __pycache__ -prune -exec rm -rf {} +
+          find proyecto_integrado practicas -type d -name .pytest_cache -prune -exec rm -rf {} +
+          find proyecto_integrado practicas -type f -name '*.pyc' -delete
+
+      - name: Preparar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias
+        working-directory: proyecto_integrado
+        run: python -m pip install -r requirements.txt
+
+      - name: Ejecutar seis pruebas
+        working-directory: proyecto_integrado
+        run: python -m pytest -v
+
+      - name: Guardar fuentes extraidas en el repositorio
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A proyecto_integrado practicas EMPIEZA_AQUI.md VERIFICACION_GENERAL.md Dataset_original_aportado.zip
+          if git diff --cached --quiet; then
+            echo 'El proyecto ya estaba actualizado.'
+            exit 0
+          fi
+          git commit -m "Importar proyecto Telco y nueve practicas"
+          git push origin HEAD:main
