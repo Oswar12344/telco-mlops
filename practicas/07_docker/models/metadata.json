@@ -1,0 +1,17 @@
+{
+  "champion": "forest",
+  "selection_metric": "roc_auc_validation",
+  "train_rows": 4225,
+  "validation_rows": 1409,
+  "test_rows": 1409,
+  "random_seed": 42,
+  "evaluation_test": {
+    "accuracy": 0.7955997161107168,
+    "precision": 0.6546762589928058,
+    "recall": 0.48663101604278075,
+    "f1": 0.558282208588957,
+    "roc_auc": 0.8325673615954946
+  },
+  "created_utc": "2026-11-17T13:51:21.413096+00:00",
+  "note": "Dataset de ejemplo did\u00e1ctico aportado por el docente; no usar para decisiones reales."
+}

@@ -1,0 +1,40 @@
+services:
+  mlflow:
+    build:
+      context: .
+      dockerfile: Dockerfile.mlflow
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow_store:/work
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/health', timeout=5)"]
+      interval: 15s
+      timeout: 8s
+      retries: 15
+  airflow:
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+    command: standalone
+    depends_on:
+      mlflow:
+        condition: service_healthy
+    environment:
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      MLFLOW_TRACKING_URI: "http://mlflow:5000"
+      PYTHONPATH: /opt/airflow/project
+      PROJECT_ROOT: /opt/airflow/project
+    ports:
+      - "8080:8080"
+    volumes:
+      - airflow_home:/opt/airflow
+      - ./dags:/opt/airflow/dags:ro
+      - ./src:/opt/airflow/project/src:ro
+      - ./data:/opt/airflow/project/data
+      - ./models:/opt/airflow/project/models
+      - ./reports:/opt/airflow/project/reports
+volumes:
+  mlflow_store:
+  airflow_home:
