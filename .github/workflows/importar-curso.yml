@@ -33,8 +33,9 @@ jobs:
           set -euo pipefail
           mkdir -p .temporal_importacion
           unzip -q Telco_MLOps_Curso_Completo.zip -d .temporal_importacion
-          cp -a .temporal_importacion/TELCO_MLOPS_CURSO/proyecto_integrado ./proyecto_integrado
-          cp -a .temporal_importacion/TELCO_MLOPS_CURSO/practicas ./practicas
+          mkdir -p proyecto_integrado practicas
+          cp -a .temporal_importacion/TELCO_MLOPS_CURSO/proyecto_integrado/. ./proyecto_integrado/
+          cp -a .temporal_importacion/TELCO_MLOPS_CURSO/practicas/. ./practicas/
           cp .temporal_importacion/TELCO_MLOPS_CURSO/EMPIEZA_AQUI.md .
           cp .temporal_importacion/TELCO_MLOPS_CURSO/VERIFICACION_GENERAL.md .
           cp .temporal_importacion/TELCO_MLOPS_CURSO/Dataset_original_aportado.zip .
