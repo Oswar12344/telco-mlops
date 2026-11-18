@@ -1,0 +1,227 @@
+# Guía de presentación al maestro — Telco MLOps
+
+**Repositorio:** https://github.com/Oswar12344/telco-mlops  
+**Entorno de la demostración:** Windows, PowerShell de VS Code, Docker Desktop.  
+**Importante:** no mostrar ni compartir el token de GitHub. La imagen GHCR puede requerir acceso porque el paquete es privado.
+
+## 1. Qué hace el proyecto
+
+Se trabaja con el dataset Telco Customer Churn (7043 registros) para predecir si un cliente podría abandonar el servicio. El proyecto integra un modelo de clasificación, FastAPI, Docker, GitHub y GitHub Actions. Las herramientas DVC, MLflow, Airflow y Evidently tienen prácticas específicas.
+
+La predicción no es certeza ni sistema comercial; es un ejercicio educativo.
+
+## 2. Preparar la computadora antes de la exposición
+
+1. Abrir **Docker Desktop** y comprobar que el motor esté funcionando.
+2. Abrir **Visual Studio Code** > **Terminal** > **New Terminal** (PowerShell).
+3. Comprobar Docker:
+
+```powershell
+docker --version
+docker info
+```
+
+4. Ver los contenedores disponibles (opcional):
+
+```powershell
+docker ps -a
+```
+
+## 3. Encender la aplicación que ya está instalada
+
+En la computadora donde ya ejecutamos la práctica, el contenedor se llama `telco-api` y utiliza el puerto **8001**.
+
+```powershell
+docker start telco-api
+```
+
+Comprobar que está activo:
+
+```powershell
+docker ps
+```
+
+Abrir:
+- Formulario: http://localhost:8001/
+- Documentación FastAPI (Swagger): http://localhost:8001/docs
+- Salud de la API: http://localhost:8001/health
+
+La respuesta de `/health` debe ser:
+
+```json
+{"status":"ok","model_loaded":true}
+```
+
+## 4. Demostrar una predicción
+
+Ingresar en el formulario:
+
+| Campo | Valor |
+| --- | --- |
+| Antigüedad (meses) | 2 |
+| Cargo mensual ($) | 85 |
+| Cargo total ($) | 170 |
+| Contrato | Month-to-month |
+| Servicio de internet | Fiber optic |
+
+Pulsar **Calcular predicción**.
+
+Resultado obtenido en la comprobación del equipo:
+
+```json
+{
+  "prediction": 1,
+  "churn_probability": 0.702736,
+  "risk_level": "Alto",
+  "message": "Se predice abandono"
+}
+```
+
+**Cómo explicarlo:** `prediction=1` significa que el modelo predice abandono para este ejemplo. La probabilidad estimada fue **70.27 %**, clasificada como **riesgo alto** según los umbrales didácticos de la aplicación.
+
+## 5. Apagar o reiniciar
+
+Detener sin borrar:
+
+```powershell
+docker stop telco-api
+```
+
+Volver a encender más adelante:
+
+```powershell
+docker start telco-api
+```
+
+Consultar registros si no abre la página:
+
+```powershell
+docker logs telco-api
+```
+
+## 6. Si hay que preparar otra computadora desde cero
+
+1. Instalar y abrir Docker Desktop.
+2. Si la imagen GHCR es privada, crear un **Personal Access Token (classic)** con el permiso mínimo `read:packages` en https://github.com/settings/tokens . **No activar `write:packages` para descargar.**
+3. Ejecutar este comando, y cuando aparezca `Password:`, pegar el token sin ponerlo directamente en la línea del comando:
+
+```powershell
+docker login ghcr.io -u Oswar12344
+```
+
+4. Descargar la imagen:
+
+```powershell
+docker pull ghcr.io/oswar12344/telco-mlops:latest
+```
+
+5. Crear y arrancar el contenedor usando el puerto 8001:
+
+```powershell
+docker run -d --name telco-api -p 8001:8000 ghcr.io/oswar12344/telco-mlops:latest
+```
+
+Si el nombre `telco-api` ya existe pero el contenedor está detenido, usar `docker start telco-api` en vez de `docker run`. Si el puerto 8001 está ocupado por otro programa, puede cambiarse el primer número, por ejemplo `-p 8002:8000`, y abrir `localhost:8002`.
+
+Nunca compartir contraseñas, tokens o capturas que los expongan.
+
+## 7. Explicar la automatización de GitHub
+
+En https://github.com/Oswar12344/telco-mlops abrir la pestaña **Actions**.
+
+- **Importar ZIP del curso MLOps** extrajo el proyecto y las nueve prácticas y ejecutó seis pruebas, con resultado exitoso.
+- **Telco CI CD** instaló dependencias, ejecutó las pruebas, construyó la imagen Docker y la publicó en `ghcr.io/oswar12344/telco-mlops:latest`; resultado exitoso.
+- La publicación de la imagen no equivale a desplegar la API en un servidor público: esta demostración funciona localmente con Docker Desktop.
+
+Ejecución verificada: https://github.com/Oswar12344/telco-mlops/actions/runs/44101997334
+
+## 8. Práctica 03: DVC — cómo prepararla
+
+**Usar la práctica independiente** `practicas/03_dvc` **fuera de la carpeta de un clon Git existente**, para que `git init` cree un repositorio nuevo solo para esa práctica.
+
+En GitHub abrir `Code > Download ZIP`, descomprimir el repositorio y copiar la carpeta `practicas/03_dvc` a una ubicación independiente (por ejemplo, `Documentos\Telco_DVC_Practica`). Abrir **esa carpeta** en VS Code y usar la terminal integrada. Comprobar:
+
+```powershell
+python --version
+git --version
+```
+
+Crear el entorno, instalar dependencias y validar los datos:
+
+```powershell
+python -m venv .venv
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\python.exe -m src.check_data
+```
+
+Se espera: `Dataset válido: 7043 filas; TotalCharges vacíos: 11`.
+
+Instalar DVC e inicializar Git/DVC (completar nombre y correo con los propios):
+
+```powershell
+.venv\Scripts\python.exe -m pip install -r requirements-dvc.txt
+git init -b main
+git config user.name "Tu Nombre"
+git config user.email "tu-correo@example.com"
+.venv\Scripts\dvc.exe init
+```
+
+Versionar la primera copia del dataset:
+
+```powershell
+.venv\Scripts\dvc.exe add data/raw/telco.csv
+git add .
+git commit -m "DVC: version 1 del CSV"
+```
+
+DVC almacena el contenido del CSV en la caché; Git versiona el archivo descriptor `data/raw/telco.csv.dvc` y la configuración, no el CSV versionado por DVC.
+
+### Pasos posteriores de DVC (realizarlos en orden)
+
+Almacenamiento remoto local:
+
+```powershell
+mkdir ..\dvc_storage
+.venv\Scripts\dvc.exe remote add -d storage ..\dvc_storage
+git add .dvc/config
+git commit -m "DVC: configurar remoto local"
+.venv\Scripts\dvc.exe push
+```
+
+Segunda versión de ejemplo:
+
+```powershell
+.venv\Scripts\python.exe -m src.data_change
+.venv\Scripts\dvc.exe status
+.venv\Scripts\dvc.exe add data/raw/telco.csv
+git add data/raw/telco.csv.dvc
+git commit -m "DVC: version 2 del CSV"
+.venv\Scripts\dvc.exe push
+```
+
+Restaurar versiones:
+
+```powershell
+git restore --source=HEAD~1 -- data/raw/telco.csv.dvc
+.venv\Scripts\dvc.exe checkout
+git restore --source=HEAD -- data/raw/telco.csv.dvc
+.venv\Scripts\dvc.exe checkout
+.venv\Scripts\dvc.exe pull
+```
+
+**Durante la clase:** realizar cada bloque uno por uno; no ejecutar todos los comandos sin verificar sus salidas. Esta secuencia corresponde a la guía de `practicas/03_dvc/GUIA_ALUMNO.md`.
+
+## 9. Mini-guion para presentar
+
+> «Este proyecto muestra un proceso MLOps con datos reales de Telco Churn. El código y las prácticas están en GitHub. GitHub Actions ejecuta pruebas automáticas y publica nuestra imagen Docker. Ahora arrancaré la aplicación en Docker Desktop, mostraré la documentación de FastAPI y solicitaré una predicción de abandono. La API también tiene una ruta de salud para comprobar que el modelo está cargado. En DVC veremos cómo versionar el dataset de manera reproducible sin almacenar todas las versiones del CSV directamente en Git».
+
+## 10. Checklist antes de exponer
+
+- [ ] Docker Desktop abierto.
+- [ ] `docker start telco-api` ejecutado.
+- [ ] Formulario `http://localhost:8001/` accesible.
+- [ ] `/health` devuelve `model_loaded: true`.
+- [ ] Predicción de prueba completada.
+- [ ] GitHub Actions disponible para mostrar evidencia.
+- [ ] Carpeta DVC independiente abierta en VS Code si se presentará esa práctica.
+- [ ] Al finalizar, ejecutar `docker stop telco-api`.
