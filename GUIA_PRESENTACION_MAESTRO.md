@@ -149,7 +149,8 @@ git --version
 Crear el entorno, instalar dependencias y validar los datos:
 
 ```powershell
-python -m venv .venv
+py -3.11 -m venv .venv
+.venv\Scripts\python.exe --version
 .venv\Scripts\python.exe -m pip install -r requirements.txt
 .venv\Scripts\python.exe -m src.check_data
 ```
@@ -206,10 +207,34 @@ git restore --source=HEAD~1 -- data/raw/telco.csv.dvc
 .venv\Scripts\dvc.exe checkout
 git restore --source=HEAD -- data/raw/telco.csv.dvc
 .venv\Scripts\dvc.exe checkout
-.venv\Scripts\dvc.exe pull
+.venv\Scripts\dvc.exe status
 ```
 
 **Durante la clase:** realizar cada bloque uno por uno; no ejecutar todos los comandos sin verificar sus salidas. Esta secuencia corresponde a la guía de `practicas/03_dvc/GUIA_ALUMNO.md`.
+
+
+### Evidencia real de la práctica completada en Windows (18/11/2026)
+
+Se ejecutó en `C:\Users\Admin\Downloads\03_dvc` con **Python 3.11.9** y **DVC 3.67.1**. La validación inicial devolvió `Dataset válido: 7043 filas; TotalCharges vacíos: 11`.
+
+- Commit inicial: `26238cb` — `DVC: version 1 del CSV` (valor inicial de `MonthlyCharges` en la primera fila: **29.85**).
+- Commit de configuración: `ed99cb3` — `DVC: configurar remoto local`.
+- `dvc push` de la primera versión: **`1 file pushed`**.
+- Script de modificación: `MonthlyCharges fila 1: 29.85 -> 31.85`.
+- `dvc status` tras modificar: `modified: data\\raw\\telco.csv`.
+- Commit de segunda versión: `4fcf38a` — `DVC: version 2 del CSV`.
+- `dvc push` de la segunda versión: **`1 file pushed`**.
+- Tras restaurar el descriptor de la versión 1 y ejecutar `dvc checkout`, la verificación de Python mostró **29.85**.
+- Tras restaurar el descriptor de la versión 2 y ejecutar `dvc checkout`, la verificación mostró **31.85**.
+- Comprobación final: **`Data and pipelines are up to date.`**
+
+Para verificar el valor del primer registro durante la presentación:
+
+```powershell
+.\.venv\Scripts\python.exe -c "import pandas as pd; df=pd.read_csv('data/raw/telco.csv'); print('MonthlyCharges fila 1:', df.loc[0, 'MonthlyCharges'])"
+```
+
+**Estado final verificado:** versión 2 restaurada, CSV con `MonthlyCharges = 31.85` en la primera fila y DVC sincronizado. La carpeta `dvc_storage` está en `C:\Users\Admin\Downloads\dvc_storage`. Los commits citados son **locales de la práctica independiente** y no deben confundirse con los commits del repositorio remoto de GitHub.
 
 ## 9. Mini-guion para presentar
 
