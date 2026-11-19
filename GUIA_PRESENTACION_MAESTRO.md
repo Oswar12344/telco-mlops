@@ -308,3 +308,38 @@ La advertencia de MLflow sobre inferencia del esquema con columnas enteras y pos
 **Para presentar:** «Airflow orquesta la validación, el entrenamiento, el registro de modelos en MLflow y la generación del reporte. Corregimos dos errores reales de integración y comprobamos una ejecución completa con las cuatro tareas exitosas».
 
 **Cierre:** desde `05_airflow`, `docker compose down` detiene los servicios conservando los volúmenes. No utilizar `docker compose down -v`.
+
+
+## Práctica 06 — FastAPI + HTML (verificado 19/11/2026)
+
+**Entorno:** Windows, VS Code, `C:\Users\Admin\Downloads\06_fastapi`, Python 3.11.9.
+
+1. Crear entorno virtual: `python -m venv .venv`. Instalar dependencias: `.\.venv\Scripts\python.exe -m pip install -r requirements.txt`.
+2. Verificar dataset: `.\.venv\Scripts\python.exe -m src.check_data` → **`Dataset válido: 7043 filas; TotalCharges vacíos: 11`**.
+3. Al iniciar Uvicorn en el puerto predeterminado 8000, Windows devolvió **`[WinError 10013] Intento de acceso a un socket no permitido por sus permisos de acceso`**. Se resolvió usando el puerto **8001**:
+   ```powershell
+   .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8001
+   ```
+   Confirmado: `Application startup complete`. Mantener la terminal abierta durante las pruebas.
+4. Formulario HTML: http://127.0.0.1:8001/ — accesible y operativo. Documentación Swagger: http://127.0.0.1:8001/docs — `POST /predict` visible.
+5. Solicitud válida en Swagger y en el formulario:
+   ```json
+   {"tenure":5,"MonthlyCharges":85.5,"TotalCharges":427.5,"Contract":"Month-to-month","InternetService":"Fiber optic"}
+   ```
+   **HTTP 200**; ambos devolvieron la misma respuesta:
+   ```json
+   {"prediction":1,"churn_probability":0.711133,"risk_level":"Alto","message":"Se predice abandono"}
+   ```
+   Interpretación: probabilidad estimada de abandono **71.11 %**, riesgo **Alto**. El formulario advierte que las probabilidades y bandas son didácticas, no un sistema comercial.
+6. Health check: http://127.0.0.1:8001/health → **`{"status":"ok","model_loaded":true}`**.
+7. Validación: repetir la solicitud con `"tenure":-10` → **HTTP 422**; respuesta: `Input should be greater than or equal to 0` para `body.tenure`. FastAPI rechaza el valor inválido.
+8. Pruebas automatizadas en segunda terminal:
+   ```powershell
+   .\.venv\Scripts\python.exe -m pytest -q
+   ```
+   Resultado real: **`6 passed, 1 warning in 2.32s`**. La única advertencia es `DeprecationWarning` de `starlette.testclient` / AnyIO; no fallaron pruebas.
+9. Detener servidor con **Ctrl+C** en la primera terminal: `Application shutdown complete`, `Finished server process` y `Stopping reloader process` confirmados.
+
+**Para presentar:** «Con FastAPI publicamos el modelo de abandono de clientes como API REST y formulario web. Probamos la predicción por Swagger y HTML, comprobamos la carga del modelo mediante /health, validamos entradas incorrectas con HTTP 422 y ejecutamos seis pruebas automáticas exitosas. El puerto 8000 estaba restringido en Windows, por lo que usamos 8001».
+
+**Estado:** funcionamiento principal verificado. Las actividades opcionales de editar el encabezado HTML y cambiar temporalmente el umbral de riesgo no se realizaron; no presentarlas como verificadas.
