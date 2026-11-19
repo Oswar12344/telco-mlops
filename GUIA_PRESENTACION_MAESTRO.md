@@ -405,3 +405,37 @@ La advertencia de MLflow sobre inferencia del esquema con columnas enteras y pos
 13. Limpieza confirmada: `docker stop telco-cicd` → `telco-cicd`; `docker rm telco-cicd` → `telco-cicd`. Se conserva la imagen local descargada.
 
 **Para presentar:** «Configuramos un workflow con dos jobs: test y docker. Un push ejecutó seis pruebas y, al aprobar, publicó la imagen en GHCR. Introdujimos deliberadamente una aserción errónea: GitHub Actions mostró test rojo y omitió docker, impidiendo publicar una versión defectuosa. Corregimos el test y ambos trabajos volvieron a verde. Descargamos la imagen desde GHCR, iniciamos FastAPI en Docker y verificamos una predicción real de abandono con probabilidad 71.11 %. Esto demuestra integración continua y entrega automatizada de una imagen; la ejecución local del contenedor es despliegue manual, no despliegue continuo automático».
+
+
+---
+
+## Práctica 9 — Monitoreo con Evidently AI (VERIFICADA)
+
+**Entorno:** Windows PowerShell, VS Code, carpeta `C:\Users\Admin\Downloads\09_monitoreo`, Python **3.11.9**, entorno virtual `.venv`.
+
+### Ejecución y resultados comprobados
+
+1. `python --version` → **Python 3.11.9**. `python -m venv .venv` terminó sin errores.
+2. `.\.venv\Scripts\python.exe -m pip install -r requirements.txt` y `.\.venv\Scripts\python.exe -m pip install -r requirements-monitoring.txt` completaron la instalación; solo aviso informativo de actualización de pip.
+3. `.\.venv\Scripts\python.exe -m src.check_data` → **`Dataset válido: 7043 filas; TotalCharges vacíos: 11`**.
+4. `.\.venv\Scripts\python.exe -m src.make_monitoring_data` → **`Preparado monitoreo: 1409 referencia, 1409 actual con drift simulado`**. Se prepararon `data/monitoring/reference.csv` y `current_shifted.csv`.
+5. `.\.venv\Scripts\python.exe -m src.monitoring --source simulated` → reporte **`reports/data_drift_simulated.html`**, abierto y examinado en navegador. Resumen JSON: `reference_rows=1409`, `current_rows=1409`, `reference_probability_mean=0.2646345669151018`, `current_probability_mean=0.3078012818160265`. Promedio **26.46 % → 30.78 %** (+4.32 puntos porcentuales). Evidently: **3 de 6 columnas (50 %) con drift**: `MonthlyCharges` (0.845699), `prediction_probability` (0.193511), `Contract` (0.16809). Sin drift: `tenure` (0.021415), `TotalCharges` (0.018401), `InternetService` (0.01125). Capturas del usuario confirmaron las gráficas: cargos mensuales actuales más altos; mayor proporción de contratos `Month-to-month` y menor proporción de contratos `One year` / `Two year`; distribución de probabilidades distinta. **Estos cambios son simulados, no históricos de una empresa.**
+6. Se inició la API con `.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8001`; inicio correcto. **Incidencia resuelta:** los enlaces del chat se abrieron con caracteres `%2A%2A` (asteriscos) añadidos a `/`, `/health` y `/docs`, causando HTTP 404. Escribir manualmente `http://127.0.0.1:8001/health` resolvió el problema: **`{"status":"ok","model_loaded":true}`**. El formulario `/` abrió correctamente.
+7. Se hicieron **cinco predicciones desde el formulario**, con resultados comprobados:
+   - `tenure=5, MonthlyCharges=85.5, TotalCharges=427.5, Contract=Month-to-month, InternetService=Fiber optic` → `prediction=1`, probabilidad **0.711133**, riesgo **Alto**.
+   - `60, 35, 2100, Two year, DSL` → `prediction=0`, probabilidad **0.022705**, riesgo **Bajo**.
+   - `24, 70, 1680, One year, Fiber optic` → `prediction=0`, probabilidad **0.109747**, riesgo **Bajo**.
+   - `2, 105, 210, Month-to-month, Fiber optic` → `prediction=1`, probabilidad **0.705862**, riesgo **Alto**.
+   - `48, 25, 1200, Two year, No` → `prediction=0`, probabilidad **0.008016**, riesgo **Bajo**.
+8. En segunda terminal: `(Get-Content .\runtime\predictions.jsonl | Measure-Object -Line).Lines` → **5**. Se verificó que las solicitudes quedaron registradas.
+9. `.\.venv\Scripts\python.exe -m src.monitoring --source api-logs` → reporte **`reports/data_drift_api-logs.html`**, abierto y examinado en navegador. Resumen JSON: `reference_rows=1409`, `current_rows=5`, `reference_probability_mean=0.2646345669151018`, `current_probability_mean=0.3114928160185163` (**26.46 % → 31.15 %**, +4.69 puntos porcentuales). Evidently indicó **4 de 6 columnas (66.667 %) con drift**: `tenure` (0.739522), `TotalCharges` (0.534594), `prediction_probability` (0.490724), `MonthlyCharges` (0.20751). Sin drift: `InternetService` (0.420922) y `Contract` (0.215603). **Advertencia imprescindible:** cinco solicitudes son una muestra demasiado pequeña para conclusiones estadísticas confiables; este reporte demuestra el mecanismo de registro y monitoreo, no una prueba sólida de drift real.
+10. Uvicorn detenido con **Ctrl+C**; terminal confirmó `Application shutdown complete`, `Finished server process` y `Stopping reloader process`. Los dos reportes HTML permanecen guardados.
+
+### Interpretación y explicación para el maestro
+
+**Data drift** significa que la distribución de las variables de entrada o de las predicciones difiere de la distribución de referencia. No equivale automáticamente a deterioro del modelo. Para medir **performance** (p. ej., accuracy, recall) se requieren **etiquetas reales** de abandono de clientes, comparables con las predicciones. El **concept drift** se refiere a cambios en la relación entre características y resultado real, y tampoco puede establecerse solo con los registros sin etiquetas de esta demostración.
+
+**Para presentar:** «Con Evidently generamos dos reportes HTML. El primero comparó 1,409 registros originales contra 1,409 modificados intencionalmente y detectó cambios en MonthlyCharges, Contract y las probabilidades de abandono: tres de seis variables. El segundo utilizó cinco solicitudes reales al formulario FastAPI, guardadas en predictions.jsonl, y permitió visualizar un monitoreo básico. El promedio de probabilidad pasó de 26.46 % en referencia a 30.78 % en datos simulados y 31.15 % en las cinco solicitudes. El segundo reporte marcó cuatro de seis variables, pero no interpretamos ese resultado como evidencia estadística confiable porque solo hay cinco solicitudes. Para comprobar la calidad predictiva y el concept drift necesitaríamos conocer el abandono real de los clientes».
+
+
+**Evidencias para entrega:** `reports/data_drift_simulated.html`, `reports/data_drift_api-logs.html`, capturas de resumen y gráficas de `MonthlyCharges`, `Contract` y `prediction_probability`, más los valores medios y la explicación de la necesidad de etiquetas reales.
