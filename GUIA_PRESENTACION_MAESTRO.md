@@ -278,3 +278,33 @@ La advertencia de MLflow sobre inferencia del esquema con columnas enteras y pos
 - [ ] GitHub Actions disponible para mostrar evidencia.
 - [ ] Carpeta DVC independiente abierta en VS Code si se presentará esa práctica.
 - [ ] Al finalizar, ejecutar `docker stop telco-api`.
+
+
+## Práctica 05 — Airflow y MLflow en Docker (verificado 19/11/2026)
+
+**Entorno:** Windows, VS Code, carpeta independiente `C:\Users\Admin\Downloads\05_airflow`, Docker Desktop Linux.
+
+1. `docker info` confirmó Docker Engine 29.9.2, Docker Compose 5.6.1 y modo `desktop-linux`.
+2. `docker compose up -d --build` construyó e inició los servicios `airflow` y `mlflow`. `docker compose ps` confirmó Airflow en puerto **8080** y MLflow saludable en puerto **5000**.
+3. Abrir http://localhost:8080. La instalación utiliza `SimpleAuthManager`; las credenciales generadas se consultaron dentro del contenedor con `docker compose exec airflow cat /opt/airflow/simple_auth_manager_passwords.json.generated`. **No divulgar contraseñas.**
+4. En Airflow localizar `telco_training_pipeline` (etiquetas `mlops`, `telco`) y sus cuatro tareas: `validar_datos`, `entrenar_modelos`, `registrar_mlflow`, `generar_reporte`.
+5. **Primer fallo observado:** `registrar_mlflow` devolvió HTTP 403 `Invalid Host header - possible DNS rebinding attack detected`. Se corrigió `compose.yaml` añadiendo al servicio `mlflow`:
+
+   ```yaml
+   environment:
+     MLFLOW_SERVER_ALLOWED_HOSTS: "mlflow:5000,localhost:*,127.0.0.1:*"
+   ```
+
+   Aplicar con `docker compose up -d --force-recreate mlflow` (sin `down -v`). Comprobaciones: `docker compose ps`, `docker compose exec airflow python -c "import urllib.request; r=urllib.request.urlopen('http://mlflow:5000/health'); print(r.status)"` devolvió **200** y `docker compose exec airflow python -c "import mlflow; mlflow.set_tracking_uri('http://mlflow:5000'); print([e.name for e in mlflow.search_experiments()])"` devolvió **['Default']** sin error 403.
+6. **Segundo fallo observado:** el registro de modelos rechazó el tipo `numpy.dtype` en `skops`. En `src/mlflow_tracking.py`, dentro de `mlflow.sklearn.log_model(...)`, se añadió:
+
+   ```python
+   skops_trusted_types=["numpy.dtype", "sklearn.tree._tree.Tree"]
+   ```
+
+   Autorizar estos tipos **solo con modelos de origen confiable**. El archivo `src` está montado como volumen; no hizo falta reconstruir imágenes. Se verificó con `docker compose exec airflow grep -n skops_trusted_types /opt/airflow/project/src/mlflow_tracking.py`.
+7. **Resultado confirmado por el usuario:** al volver a activar el DAG, **las cuatro tareas aparecieron en verde (éxito)**. Esta es la ejecución que se debe mostrar en la exposición. Las ejecuciones anteriores fallidas sirven para explicar depuración y recuperación.
+
+**Para presentar:** «Airflow orquesta la validación, el entrenamiento, el registro de modelos en MLflow y la generación del reporte. Corregimos dos errores reales de integración y comprobamos una ejecución completa con las cuatro tareas exitosas».
+
+**Cierre:** desde `05_airflow`, `docker compose down` detiene los servicios conservando los volúmenes. No utilizar `docker compose down -v`.
