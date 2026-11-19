@@ -236,6 +236,34 @@ Para verificar el valor del primer registro durante la presentación:
 
 **Estado final verificado:** versión 2 restaurada, CSV con `MonthlyCharges = 31.85` en la primera fila y DVC sincronizado. La carpeta `dvc_storage` está en `C:\Users\Admin\Downloads\dvc_storage`. Los commits citados son **locales de la práctica independiente** y no deben confundirse con los commits del repositorio remoto de GitHub.
 
+## Práctica 04: MLflow — ejecución verificada en Windows (18/11/2026)
+
+En `C:\Users\Admin\Downloads\04_mlflow`, con Python 3.11.9 y MLflow 3.18.0, se verificó el dataset: **7043 filas, 11 TotalCharges vacíos**.
+
+Para iniciar el servidor, abrir una terminal de VS Code y dejarla activa:
+
+```powershell
+.\.venv\Scripts\python.exe -m mlflow server --host 127.0.0.1 --port 5000
+```
+
+Abrir http://127.0.0.1:5000. En una **segunda terminal**, ejecutar:
+
+```powershell
+.\.venv\Scripts\python.exe -m src.mlflow_tracking
+```
+
+El código original falló al registrar los modelos porque MLflow 3.18.0 requiere autorización para tipos usados por `skops`. En `src/mlflow_tracking.py`, la llamada a `mlflow.sklearn.log_model(...)` se corrigió incluyendo:
+
+```python
+skops_trusted_types=["numpy.dtype", "sklearn.tree._tree.Tree"]
+```
+
+**Solo confiar en estos tipos para modelos de procedencia conocida**; los archivos de la práctica son artefactos locales confiados por el usuario.
+
+**Resultados reales confirmados:** se registraron `logistic`, `forest` y `svm`, sin excepción final. MLflow creó el modelo registrado **`TelcoChurnClassifier`**, versión **1**, alias **`champion`**, y seleccionó **`forest` (Random Forest)**. Mensaje: `Champion: forest | Registry: TelcoChurnClassifier v1 alias champion`.
+
+La advertencia de MLflow sobre inferencia del esquema con columnas enteras y posibles valores ausentes es informativa para esta ejecución; no impidió el registro, pero debe revisarse si se usan entradas con valores faltantes en producción. Los intentos fallidos previos pueden aparecer en el historial del experimento y no deben confundirse con los tres registros exitosos de la última ejecución.
+
 ## 9. Mini-guion para presentar
 
 > «Este proyecto muestra un proceso MLOps con datos reales de Telco Churn. El código y las prácticas están en GitHub. GitHub Actions ejecuta pruebas automáticas y publica nuestra imagen Docker. Ahora arrancaré la aplicación en Docker Desktop, mostraré la documentación de FastAPI y solicitaré una predicción de abandono. La API también tiene una ruta de salud para comprobar que el modelo está cargado. En DVC veremos cómo versionar el dataset de manera reproducible sin almacenar todas las versiones del CSV directamente en Git».
