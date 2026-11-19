@@ -376,3 +376,32 @@ La advertencia de MLflow sobre inferencia del esquema con columnas enteras y pos
 **Para presentar:** «Construimos una imagen Docker con FastAPI, sus dependencias y el modelo entrenado; verificamos una predicción real idéntica a la práctica 6. Reutilizamos la misma imagen cambiando el puerto de Windows y generamos una segunda versión con un título distinto. Docker conservó v1 y v2 y reutilizó la caché, reduciendo la construcción de 54.5 a 1.1 segundos».
 
 **Nota:** las modificaciones de `app/main.py` para v2 se realizaron en la copia local `07_docker`. No asumir que la versión de GitHub se modificó.
+
+
+## Práctica 08 — CI/CD con GitHub Actions (verificado 19/11/2026)
+
+**Entorno:** Windows, VS Code, PowerShell, `C:\Users\Admin\Downloads\08_cicd`, Python 3.11.9, Git 2.56.0.windows.4. Repositorio independiente privado: https://github.com/Oswar12344/telco-churn-cicd
+
+1. Se creó entorno virtual `.venv`, se instalaron dependencias desde `requirements.txt`, y `python -m src.check_data` devolvió **`Dataset válido: 7043 filas; TotalCharges vacíos: 11`**.
+2. Pruebas iniciales: `.\.venv\Scripts\python.exe -m pytest -v` → **6 passed, 1 warning in 2.49s**. El aviso de Starlette/AnyIO es deprecación, no fallo.
+3. Se revisó `.github/workflows/cicd.yml`: triggers `push` y `pull_request` en `main`; trabajo `test` con Python 3.11 y `pytest -v`; trabajo `docker` con `needs: test`, solo en `push`, permisos `packages: write`, login con `GITHUB_TOKEN`, construcción y publicación en GHCR con etiquetas `latest` y SHA del commit.
+4. `git init -b main`; se comprobó que `.venv` no figuraba entre los archivos sin seguimiento; `git add .`. Las advertencias `LF will be replaced by CRLF` fueron inocuas. Se configuró la identidad Git local al repositorio. Commit inicial **`23e3082`**, mensaje `Inicio CI CD`, **38 archivos**. `git remote add origin https://github.com/Oswar12344/telco-churn-cicd.git` y `git push -u origin main` se ejecutaron correctamente.
+5. GitHub Actions inicial: **`test` verde, `docker` verde**, comprobado por el usuario.
+6. Fallo intencional: en `tests/test_api.py`, dentro de `test_health`, se cambió `assert response.status_code == 200` por `== 404`. Prueba local → **1 failed, 5 passed, 1 warning in 2.50s**; error concreto `assert 200 == 404`. Commit **`a486ffe`**, mensaje `Ejercicio: fallo intencional`, push exitoso. En GitHub Actions se verificó **`test` rojo y `docker` omitido (skipped)**: no se publicó una nueva imagen.
+7. Corrección: se restituyó `assert response.status_code == 200`; prueba local → **6 passed, 1 warning in 2.11s**. Commit **`ada90b7`**, mensaje `Corregir test`, push exitoso. En GitHub Actions se verificó **`test` verde y `docker` verde**. Secuencia **verde → rojo → verde** completada.
+8. Se comprobó que el paquete **`telco-churn-cicd`** aparecía en GitHub Packages/GHCR.
+9. `docker pull ghcr.io/oswar12344/telco-churn-cicd:latest` → **Downloaded newer image**, digest completo **`sha256:823dbf9c8a84412ddfcb78e70d58754a32a48caf841734f1c6c7e1366f49b2f9`**.
+10. `docker run -d --name telco-cicd -p 8001:8000 ghcr.io/oswar12344/telco-churn-cicd:latest` → contenedor **`e60ccff27afb7e09d4decd2f9cab6175c2fd01ce494ff853a99cb65a58256dc4`**. Puerto host 8001 por conflicto previo con 8000 en Windows.
+11. `http://localhost:8001/health` → **`{"status":"ok","model_loaded":true}`**.
+12. Swagger `http://localhost:8001/docs`, `POST /predict` con:
+    ```json
+    {"tenure":5,"MonthlyCharges":85.5,"TotalCharges":427.5,"Contract":"Month-to-month","InternetService":"Fiber optic"}
+    ```
+    Respuesta **HTTP 200**:
+    ```json
+    {"prediction":1,"churn_probability":0.711133,"risk_level":"Alto","message":"Se predice abandono"}
+    ```
+    Coincide exactamente con las prácticas 6 y 7. Swagger mostró `Telco Customer Churn — Curso MLOps`, versión `1.0.0`.
+13. Limpieza confirmada: `docker stop telco-cicd` → `telco-cicd`; `docker rm telco-cicd` → `telco-cicd`. Se conserva la imagen local descargada.
+
+**Para presentar:** «Configuramos un workflow con dos jobs: test y docker. Un push ejecutó seis pruebas y, al aprobar, publicó la imagen en GHCR. Introdujimos deliberadamente una aserción errónea: GitHub Actions mostró test rojo y omitió docker, impidiendo publicar una versión defectuosa. Corregimos el test y ambos trabajos volvieron a verde. Descargamos la imagen desde GHCR, iniciamos FastAPI en Docker y verificamos una predicción real de abandono con probabilidad 71.11 %. Esto demuestra integración continua y entrega automatizada de una imagen; la ejecución local del contenedor es despliegue manual, no despliegue continuo automático».
