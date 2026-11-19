@@ -343,3 +343,36 @@ La advertencia de MLflow sobre inferencia del esquema con columnas enteras y pos
 **Para presentar:** «Con FastAPI publicamos el modelo de abandono de clientes como API REST y formulario web. Probamos la predicción por Swagger y HTML, comprobamos la carga del modelo mediante /health, validamos entradas incorrectas con HTTP 422 y ejecutamos seis pruebas automáticas exitosas. El puerto 8000 estaba restringido en Windows, por lo que usamos 8001».
 
 **Estado:** funcionamiento principal verificado. Las actividades opcionales de editar el encabezado HTML y cambiar temporalmente el umbral de riesgo no se realizaron; no presentarlas como verificadas.
+
+
+## Práctica 07 — Docker (verificado 19/11/2026)
+
+**Entorno:** Windows, VS Code, carpeta `C:\Users\Admin\Downloads\07_docker`, Docker Desktop 29.9.2, Compose 5.6.1, contexto `desktop-linux` (WSL2).
+
+1. `docker info` confirmó conexión al motor Docker Linux (16 CPU, 15.28 GiB).
+2. Construcción inicial: `docker build -t telco-api:v1 .` → **13/13 pasos, 54.5 s, sin errores**. `docker images telco-api` mostró `telco-api:v1`, ID `07ba101cfc08`, uso de disco 725 MB, contenido 165 MB.
+3. Contenedor inicial: `docker run -d --name telco-v1 -p 8001:8000 telco-api:v1`. `docker ps` confirmó estado **Up** y publicación `8001:8000`. Se utilizó 8001 en Windows por el problema de permisos del puerto 8000 detectado en la práctica 6.
+4. `http://localhost:8001/health` → **`{"status":"ok","model_loaded":true}`**.
+5. Swagger `http://localhost:8001/docs`: `POST /predict` con entrada:
+   ```json
+   {"tenure":5,"MonthlyCharges":85.5,"TotalCharges":427.5,"Contract":"Month-to-month","InternetService":"Fiber optic"}
+   ```
+   Respuesta real **HTTP 200**:
+   ```json
+   {"prediction":1,"churn_probability":0.711133,"risk_level":"Alto","message":"Se predice abandono"}
+   ```
+   Coincide con la predicción de FastAPI ejecutada fuera de Docker (práctica 6).
+6. `docker logs telco-v1` confirmó `Application startup complete`, `GET /health` 200, `GET /docs` 200, `GET /openapi.json` 200 y `POST /predict` 200. `GET /favicon.ico` 404 es inocuo: no existe icono configurado.
+7. `docker stop telco-v1` y `docker rm telco-v1` → ambos comandos confirmaron `telco-v1`.
+8. Reutilización de imagen con otro puerto: `docker run -d --name telco-9000 -p 9000:8000 telco-api:v1`. **Formulario HTML accesible en `http://localhost:9000/`**, confirmado por el usuario. Después se detuvo y eliminó con `docker stop telco-9000` y `docker rm telco-9000`, ambos confirmados.
+9. Para crear v2, en `app/main.py` se cambió la instancia de FastAPI a:
+   ```python
+   app = FastAPI(title="Telco API v2", version="2.0.0")
+   ```
+   `docker build -t telco-api:v2 .` → **13/13 pasos, 1.1 s**. Las capas de dependencias quedaron en caché.
+10. `docker images telco-api` mostró ambas versiones simultáneamente: `telco-api:v1` ID `07ba101cfc08` y `telco-api:v2` ID `729ef23eaed1`.
+11. `docker run -d --name telco-v2 -p 9000:8000 telco-api:v2` creó el contenedor; Swagger `http://localhost:9000/docs` mostró **Telco API v2** y versión **2.0.0**, confirmado por el usuario. El usuario indicó haber realizado la detención y eliminación de `telco-v2`, sin pegar la salida final de esos dos comandos.
+
+**Para presentar:** «Construimos una imagen Docker con FastAPI, sus dependencias y el modelo entrenado; verificamos una predicción real idéntica a la práctica 6. Reutilizamos la misma imagen cambiando el puerto de Windows y generamos una segunda versión con un título distinto. Docker conservó v1 y v2 y reutilizó la caché, reduciendo la construcción de 54.5 a 1.1 segundos».
+
+**Nota:** las modificaciones de `app/main.py` para v2 se realizaron en la copia local `07_docker`. No asumir que la versión de GitHub se modificó.
