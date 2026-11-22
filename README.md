@@ -1,75 +1,104 @@
-# Telco Customer Churn — Curso MLOps
+# Telco Customer Churn — Proyecto de Introducción a MLOps
 
-Repositorio privado de material educativo con dataset Kaggle proporcionado por el docente. El curso abarca Git, GitHub, DVC, MLflow, Airflow, FastAPI, Docker, CI/CD y monitoreo.
+## Descripción del proyecto
 
-> **Estado:** los workflows ya están preparados. Falta subir el archivo `Telco_MLOps_Curso_Completo.zip` para importar el contenido. No se debe afirmar que CI/CD funciona hasta que GitHub Actions finalice correctamente.
+Proyecto académico de Minería de Datos desarrollado para aplicar herramientas y buenas prácticas de MLOps (Machine Learning Operations).
 
-## Primer paso (solo una carga de archivo)
+El proyecto utiliza el conjunto de datos **Telco Customer Churn**, proporcionado por el docente, para desarrollar un modelo de Machine Learning capaz de predecir si un cliente de telecomunicaciones podría abandonar el servicio.
 
-1. Descarga el archivo `Telco_MLOps_Curso_Completo.zip` proporcionado en ChatGPT.
-2. En este repositorio, selecciona **Add file > Upload files**.
-3. Arrastra **el ZIP sin descomprimir**, con el nombre exacto `Telco_MLOps_Curso_Completo.zip`, a la raíz del repositorio.
-4. En la parte inferior, selecciona **Commit directly to the main branch** y confirma la carga.
-5. Ve a **Actions** y abre **Importar ZIP del curso MLOps**. Espera a que aparezca la ejecución con marca verde.
+Además del entrenamiento del modelo, se implementaron herramientas para controlar versiones, automatizar procesos, publicar una API, ejecutar pruebas y monitorear las predicciones.
 
-El workflow `.github/workflows/importar-curso.yml` comprueba la estructura del ZIP, lo extrae, ejecuta las seis pruebas locales del proyecto integrado y, si pasan, guarda la estructura de carpetas en GitHub.
+## Objetivo
 
-## Estructura que aparecerá después de la importación
+Desarrollar y organizar un proyecto de Machine Learning aplicando las principales etapas de MLOps: versionado, experimentación, entrenamiento, automatización, despliegue, integración continua y monitoreo.
+
+## Herramientas implementadas
+
+| Herramienta | Implementación |
+|---|---|
+| Git | Control de versiones y seguimiento de cambios. |
+| GitHub | Almacenamiento del código y documentación del proyecto. |
+| DVC | Versionado de datos y seguimiento de cambios en el dataset. |
+| MLflow | Registro de experimentos, modelos y selección del modelo champion. |
+| Apache Airflow | Automatización del flujo de entrenamiento mediante un DAG. |
+| FastAPI | API y formulario web para realizar predicciones. |
+| Docker | Empaquetado y ejecución de la aplicación en contenedores. |
+| GitHub Actions | Pruebas automáticas y construcción de imágenes Docker. |
+| Evidently | Generación de reportes para analizar cambios en los datos. |
+
+## Resultados principales
+
+- **Dataset:** 7,043 registros de clientes.
+- **Calidad de datos:** se identificaron 11 valores vacíos en `TotalCharges`.
+- **Modelos evaluados:** Regresión Logística, Random Forest y SVM.
+- **Modelo seleccionado:** Random Forest, registrado en MLflow con el alias `champion`.
+- **API:** predicciones verificadas mediante FastAPI y su documentación interactiva.
+- **Pruebas:** seis pruebas automatizadas ejecutadas correctamente.
+- **Airflow:** ejecución satisfactoria del flujo de entrenamiento y sus cuatro tareas.
+- **Docker:** ejecución comprobada de la aplicación mediante contenedores.
+- **CI/CD:** ejecución exitosa de las etapas de pruebas y construcción de imagen Docker en GitHub Actions.
+- **Monitoreo:** reportes de cambios en la distribución de los datos generados con Evidently.
+
+Estos resultados corresponden a un proyecto académico y no representan un sistema desplegado en producción.
+
+## Organización del repositorio
 
 ```text
-proyecto_integrado/
-  data/raw/telco.csv
-  models/champion.joblib
-  app/
-  src/
-  tests/
-  dags/
-  .github/workflows/
-  Dockerfile
-  compose.yaml
-  README.md
-practicas/
-  01_git/
-  02_github/
-  03_dvc/
-  04_mlflow/
-  05_airflow/
-  06_fastapi/
-  07_docker/
-  08_cicd/
-  09_monitoreo/
-EMPIEZA_AQUI.md
-VERIFICACION_GENERAL.md
-Dataset_original_aportado.zip
+telco-mlops/
+├── .github/workflows/
+├── practicas/
+│   ├── 01_git/
+│   ├── 02_github/
+│   ├── 03_dvc/
+│   ├── 04_mlflow/
+│   ├── 05_airflow/
+│   ├── 06_fastapi/
+│   ├── 07_docker/
+│   ├── 08_cicd/
+│   └── 09_monitoreo/
+├── proyecto_integrado/
+├── Dataset_original_aportado.zip
+├── Telco_MLOps_Curso_Completo.zip
+├── EMPIEZA_AQUI.md
+├── GUIA_PRESENTACION_MAESTRO.md
+└── VERIFICACION_GENERAL.md
 ```
 
-**Importante:** las nueve prácticas son independientes y por eso incluyen copias del dataset y de modelos.
+Las nueve prácticas están organizadas de manera independiente para facilitar su revisión y ejecución. La carpeta `proyecto_integrado` reúne los componentes principales del proyecto.
 
-## Verificación del proyecto integrado
+## Ejecución de la aplicación
 
-En Windows, abre `proyecto_integrado` en VS Code y ejecuta `scripts/01_verificar_en_windows.bat`. Alternativamente, en una consola CMD en esa carpeta:
+Para ejecutar la aplicación del proyecto integrado en Windows, se requiere Python 3.11 y las dependencias indicadas en `requirements.txt`.
 
-```bat
+Desde la carpeta `proyecto_integrado`:
+
+```powershell
 py -3.11 -m venv .venv
-.venv\Scripts\python.exe -m pip install -r requirements.txt
-.venv\Scripts\python.exe -m pytest -v
-.venv\Scripts\python.exe -m uvicorn app.main:app --reload
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pytest -v
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8001
 ```
 
-Abre `http://localhost:8000/docs` o `http://localhost:8000/` para realizar predicciones.
+Una vez iniciada, la aplicación puede consultarse en:
 
-## CI/CD y GHCR
+- Formulario web: http://127.0.0.1:8001/
+- Documentación de la API: http://127.0.0.1:8001/docs
+- Estado del servicio: http://127.0.0.1:8001/health
 
-Una vez que la importación terminó con éxito, en **Actions** selecciona **Telco CI CD > Run workflow > Run workflow**. Ejecuta las pruebas y, si pasan, construye y publica la imagen Docker en `ghcr.io/oswar12344/telco-mlops:latest` usando `GITHUB_TOKEN`. Puede requerir ajustes de permisos del repositorio o del paquete; revisa el registro de Actions si falla.
+Los componentes de Airflow, MLflow, Docker y monitoreo cuentan con sus propias configuraciones y guías de ejecución.
 
-El evento generado por el token automático al importar el paquete puede no activar otro workflow, por lo que es necesario iniciar manualmente esta primera ejecución. Los siguientes cambios normales al código en `main` sí activarán CI/CD.
+## Repositorio y entrega
 
-## Alcance y comprobaciones pendientes
+**Repositorio:** https://github.com/Oswar12344/telco-mlops
 
-- Dataset Telco Customer Churn: **7,043 filas**, con 11 espacios vacíos en `TotalCharges`.
-- Modelos: Regresión Logística, Random Forest y SVM (RBF); Champion seleccionado en validación.
-- Pruebas de FastAPI y datos: **6 pruebas** comprobadas en el entorno de creación.
-- Requieren validación externa: DVC, MLflow, Airflow, Docker Desktop, GHCR y Evidently.
-- El dataset y el artefacto joblib son material didáctico; no son un sistema en producción. El repositorio debe permanecer privado hasta confirmar los términos de redistribución del dataset.
+El repositorio es público y contiene el código fuente, las nueve prácticas, el proyecto integrado, las configuraciones y la documentación.
 
-Para las instrucciones por herramienta, consulta `practicas/NN_nombre/GUIA_ALUMNO.md` y `GUIA_DOCENTE.md`.
+También se incluye el archivo `Telco_MLOps_Curso_Completo.zip`, que permite obtener una copia organizada del proyecto.
+
+## Conclusión
+
+El proyecto permitió aplicar herramientas de MLOps a un caso de predicción de abandono de clientes, desde la preparación y el versionado de datos hasta la automatización, las predicciones y el monitoreo.
+
+Se comprobó el funcionamiento de los componentes principales y se documentaron los resultados obtenidos durante las prácticas.
+
+**Nota:** este repositorio tiene fines exclusivamente académicos. El modelo y los datos se utilizan como material de aprendizaje y no constituyen un servicio comercial en producción.
